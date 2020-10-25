@@ -1,0 +1,22 @@
+{
+  "name": "cg-texture",
+  "version": "1.0.0",
+  "description": "P4: Textures",
+  "main": "index.html",
+  "scripts": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nickrgarner/cg-texture.git"
+  },
+  "author": "Nick Garner",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/nickrgarner/cg-texture/issues"
+  },
+  "homepage": "https://github.com/nickrgarner/cg-texture#readme",
+  "devDependencies": {
+    "prettier": "2.1.2"
+  }
+}
