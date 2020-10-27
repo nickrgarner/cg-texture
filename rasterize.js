@@ -480,7 +480,7 @@ function loadModels() {
           uvToAdd = inputTriangles[whichSet].uvs[whichSetVert]; // get UV coords to add
           inputTriangles[whichSet].glVertices.push(vtxToAdd[0], vtxToAdd[1], vtxToAdd[2]); // put coords in set coord list
           inputTriangles[whichSet].glNormals.push(normToAdd[0], normToAdd[1], normToAdd[2]); // put normal in set coord list
-          inputTriangles[whichSet].glTexCoords.push(uvToAdd[0], uvToAdd[1]); // put texel coords in set
+          inputTriangles[whichSet].glTexCoords.push(1 - uvToAdd[0], 1 - uvToAdd[1]); // put texel coords in set
           vec3.max(maxCorner, maxCorner, vtxToAdd); // update world bounding box corner maxima
           vec3.min(minCorner, minCorner, vtxToAdd); // update world bounding box corner minima
           vec3.add(inputTriangles[whichSet].center, inputTriangles[whichSet].center, vtxToAdd); // add to ctr sum
