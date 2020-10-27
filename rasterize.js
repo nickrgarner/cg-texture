@@ -1,8 +1,8 @@
 /* GLOBAL CONSTANTS AND VARIABLES */
 
 /* assignment specific globals */
-const INPUT_TRIANGLES_URL = 'https://ncsucgclass.github.io/prog3/triangles.json'; // triangles file loc
-const INPUT_ELLIPSOIDS_URL = 'https://ncsucgclass.github.io/prog3/ellipsoids.json'; // ellipsoids file loc
+const INPUT_TRIANGLES_URL = 'https://ncsucgclass.github.io/prog4/triangles.json'; // triangles file loc
+const INPUT_ELLIPSOIDS_URL = 'https://ncsucgclass.github.io/prog4/ellipsoids.json'; // ellipsoids file loc
 var defaultEye = vec3.fromValues(0.5, 0.5, -0.5); // default eye position in world space
 var defaultCenter = vec3.fromValues(0.5, 0.5, 0.5); // default view direction in world space
 var defaultUp = vec3.fromValues(0, 1, 0); // default view up vector
@@ -44,14 +44,15 @@ var Up = vec3.clone(defaultUp); // view up vector in world space
 /* texture variables */
 var abe; // Abe texture
 var tree; // Tree texture
-var earth; // earth map texture
 var billie; // Billie Holliday texture
+var earth; // earth map texture
 var stars; // stars texture
-var samplerAbe; // uniform for Abe
-var samplerTree; // uniform for Tree
-var samplerEarth; // uniform for Earth
-var samplerBillie; // uniform for Billie
-var samplerStars; // uniform for Stars
+var uSampler; // texture sampler for fragment shader
+var abeURL = 'https://ncsucgclass.github.io/prog4/abe.png';
+var treeURL = 'https://ncsucgclass.github.io/prog4/tree.png';
+var billieURL = 'https://ncsucgclass.github.io/prog4/billie.jpg';
+var earthURL = 'https://ncsucgclass.github.io/prog4/earth.png';
+var starsURL = 'https://ncsucgclass.github.io/prog4/stars.jpg';
 
 // ASSIGNMENT HELPER FUNCTIONS
 
@@ -109,6 +110,7 @@ function loadTexture(gl, url) {
     }
   };
   image.src = url;
+  image.crossOrigin = 'Anonymous';
 
   return texture;
 }
@@ -504,7 +506,7 @@ function loadModels() {
         gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffers[whichSet]);
         gl.bufferData(
           gl.ARRAY_BUFFER,
-          new Float32Array(inputTriangles[whichSet].glTexels),
+          new Float32Array(inputTriangles[whichSet].glTexCoords),
           gl.STATIC_DRAW,
         ); // data in
 
@@ -649,11 +651,7 @@ function setupShaders() {
 
         // texture vars
         varying vec2 vTextureCoord; // interpolated texture coords
-        uniform sampler2D samplerAbe;
-        uniform sampler2D samplerTree;
-        uniform sampler2D samplerEarth;
-        uniform sampler2D samplerBillie;
-        uniform sampler2D samplerStars;
+        uniform highp sampler2D uSampler;
             
         void main(void) {
         
@@ -674,7 +672,7 @@ function setupShaders() {
             
             // combine to output color
             vec3 colorOut = ambient + diffuse + specular; // no specular yet
-            //gl_FragColor = vec4(colorOut, 1.0);
+            // gl_FragColor = vec4(colorOut, 1.0);
             gl_FragColor = texture2D(uSampler, vTextureCoord);
         }
     `;
@@ -732,11 +730,7 @@ function setupShaders() {
         diffuseULoc = gl.getUniformLocation(shaderProgram, 'uDiffuse'); // ptr to diffuse
         specularULoc = gl.getUniformLocation(shaderProgram, 'uSpecular'); // ptr to specular
         shininessULoc = gl.getUniformLocation(shaderProgram, 'uShininess'); // ptr to shininess
-        samplerAbe = gl.getUniformLocation(shaderProgram, 'samplerAbe');
-        samplerTree = gl.getUniformLocation(shaderProgram, 'samplerTree');
-        samplerEarth = gl.getUniformLocation(shaderProgram, 'samplerEarth');
-        samplerBillie = gl.getUniformLocation(shaderProgram, 'samplerBillie');
-        samplerStars = gl.getUniformLocation(shaderProgram, 'samplerStars');
+        uSampler = gl.getUniformLocation(shaderProgram, 'uSampler');
 
         // pass global constants into fragment uniforms
         gl.uniform3fv(eyePositionULoc, Eye); // pass in the eye's position
@@ -839,6 +833,24 @@ function renderModels() {
     gl.vertexAttribPointer(vPosAttribLoc, 3, gl.FLOAT, false, 0, 0); // feed
     gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffers[whichTriSet]); // activate
     gl.vertexAttribPointer(vNormAttribLoc, 3, gl.FLOAT, false, 0, 0); // feed
+    gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffers[whichTriSet]); // activate
+    gl.vertexAttribPointer(vTexelAttribLoc, 2, gl.FLOAT, false, 0, 0); // feed
+
+    // Setup texture for this triangle
+    var currentTexture;
+    var textureName = currSet.material.texture;
+
+    if (textureName == 'abe.png') {
+      currentTexture = abe;
+    } else if (textureName == 'billie.jpg') {
+      currentTexture = billie;
+    } else if (textureName == 'tree.png') {
+      currentTexture = tree;
+    }
+
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, currentTexture);
+    gl.uniform1i(uSampler, 0);
 
     // triangle buffer: activate and render
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, triangleBuffers[whichTriSet]); // activate
@@ -873,21 +885,20 @@ function renderModels() {
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, triangleBuffers[numTriangleSets + whichEllipsoid]); // activate tri buffer
 
     // bind textures to uSampler
+    var currentTexture;
+    var textureName = ellipsoid.texture;
+
+    if (textureName == 'earth.png') {
+      currentTexture = earth;
+    } else if (textureName == 'billie.jpg') {
+      currentTexture = billie;
+    } else if (textureName == 'stars.jpg') {
+      currentTexture = stars;
+    }
+
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, abe);
-    gl.uniform1f(samplerAbe, 0);
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, tree);
-    gl.uniform1f(samplerTree, 1);
-    gl.activeTexture(gl.TEXTURE2);
-    gl.bindTexture(gl.TEXTURE_2D, earth);
-    gl.uniform1f(samplerEarth, 2);
-    gl.activeTexture(gl.TEXTURE3);
-    gl.bindTexture(gl.TEXTURE_2D, billie);
-    gl.uniform1f(samplerBillie, 3);
-    gl.activeTexture(gl.TEXTURE4);
-    gl.bindTexture(gl.TEXTURE_2D, stars);
-    gl.uniform1f(samplerStars, 4);
+    gl.bindTexture(gl.TEXTURE_2D, currentTexture);
+    gl.uniform1i(uSampler, 0);
 
     // draw a transformed instance of the ellipsoid
     gl.drawElements(
@@ -903,6 +914,12 @@ function renderModels() {
 
 function main() {
   setupWebGL(); // set up the webGL environment
+  // Load textures
+  abe = loadTexture(gl, abeURL);
+  tree = loadTexture(gl, treeURL);
+  billie = loadTexture(gl, billieURL);
+  earth = loadTexture(gl, earthURL);
+  stars = loadTexture(gl, starsURL);
   loadModels(); // load in the models from tri file
   setupShaders(); // setup the webGL shaders
   renderModels(); // draw the triangles using webGL
