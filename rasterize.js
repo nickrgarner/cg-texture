@@ -399,6 +399,18 @@ function loadModels() {
           } // end switch
         });
 
+        // make UV coords using Normal x,y coords
+        var ellipsoidUVs = [];
+        for (var i = 0; i < ellipsoidNormals.length; i++) {
+          var normal = vec3.fromValues(
+            ellipsoidNormals[i++],
+            ellipsoidNormals[i++],
+            ellipsoidNormals[i],
+          );
+          vec3.normalize(normal, normal);
+          ellipsoidUVs.push(normal[0], normal[2]);
+        }
+
         // make triangles, from south pole to middle latitudes to north pole
         var ellipsoidTriangles = []; // triangles to return
         for (
@@ -434,6 +446,7 @@ function loadModels() {
       return {
         vertices: ellipsoidVertices,
         normals: ellipsoidNormals,
+        uvs: ellipsoidUVs,
         triangles: ellipsoidTriangles,
       };
     } catch (e) {
@@ -565,13 +578,16 @@ function loadModels() {
           // make the ellipsoid model
           ellipsoidModel = makeEllipsoid(ellipsoid, 32);
 
-          // send the ellipsoid vertex coords and normals to webGL
+          // send the ellipsoid vertex coords, normals, and uvs to webGL
           vertexBuffers.push(gl.createBuffer()); // init empty webgl ellipsoid vertex coord buffer
           gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffers[vertexBuffers.length - 1]); // activate that buffer
           gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(ellipsoidModel.vertices), gl.STATIC_DRAW); // data in
           normalBuffers.push(gl.createBuffer()); // init empty webgl ellipsoid vertex normal buffer
           gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffers[normalBuffers.length - 1]); // activate that buffer
           gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(ellipsoidModel.normals), gl.STATIC_DRAW); // data in
+          uvBuffers.push(gl.createBuffer()); // init empty webgl ellipsoid vertex uv buffer
+          gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffers[uvBuffers.length - 1]); // activate that buffer
+          gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(ellipsoidModel.uvs), gl.STATIC_DRAW); // data in
 
           triSetSizes.push(ellipsoidModel.triangles.length);
 
@@ -674,6 +690,9 @@ function setupShaders() {
             vec3 colorOut = ambient + diffuse + specular; // no specular yet
             // gl_FragColor = vec4(colorOut, 1.0);
             gl_FragColor = texture2D(uSampler, vTextureCoord);
+            if (gl_FragColor.a < 0.7) {
+              discard;
+            }
         }
     `;
 
