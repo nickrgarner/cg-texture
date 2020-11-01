@@ -35,6 +35,7 @@ var ambientULoc; // where to put ambient reflectivity for fragment shader
 var diffuseULoc; // where to put diffuse reflectivity for fragment shader
 var specularULoc; // where to put specular reflectivity for fragment shader
 var shininessULoc; // where to put specular exponent for fragment shader
+var blendToggleULoc; // where to put current texture-light blending mode for frag shader
 
 /* interaction variables */
 var Eye = vec3.clone(defaultEye); // eye position in world space
@@ -53,6 +54,7 @@ var treeURL = 'https://ncsucgclass.github.io/prog4/tree.png';
 var billieURL = 'https://ncsucgclass.github.io/prog4/billie.jpg';
 var earthURL = 'https://ncsucgclass.github.io/prog4/earth.png';
 var starsURL = 'https://ncsucgclass.github.io/prog4/stars.jpg';
+var modulate = 0; // True if modulate, false if replace
 
 // ASSIGNMENT HELPER FUNCTIONS
 
@@ -298,6 +300,15 @@ function handleKeyDown(event) {
         vec3.set(inputEllipsoids[whichTriSet].yAxis, 0, 1, 0);
       } // end for all ellipsoids
       break;
+    case 'KeyB':
+      if (modulate) {
+        modulate = 0;
+        gl.uniform1f(blendToggleULoc, 0.0);
+      } else {
+        modulate = 1;
+        gl.uniform1f(blendToggleULoc, 1.0);
+      }
+      break;
   } // end switch
 } // end handleKeyDown
 
@@ -360,16 +371,13 @@ function loadModels() {
         for (var latAngle = -latLimitAngle; latAngle <= latLimitAngle; latAngle += angleIncr) {
           latRadius = Math.cos(latAngle); // radius of current latitude
           latY = Math.sin(latAngle); // height at current latitude
-          for (
-            var longAngle = 0;
-            longAngle < 2 * Math.PI;
-            longAngle += angleIncr // for each long
-          )
+          for (var longAngle = 0; longAngle < 2 * Math.PI; longAngle += angleIncr) {
             ellipsoidVertices.push(
               latRadius * Math.sin(longAngle),
               latY,
               latRadius * Math.cos(longAngle),
             );
+          }
         } // end for each latitude
         ellipsoidVertices.push(0, 1, 0); // add north pole
         ellipsoidVertices = ellipsoidVertices.map(function (val, idx) {
@@ -402,6 +410,7 @@ function loadModels() {
         // make UV coords using Normal x,y coords
         // Source: http://www.mvps.org/directx/articles/spheremap.htm
         var ellipsoidUVs = [];
+        // var count = 0;
         for (var i = 0; i < ellipsoidNormals.length; i++) {
           var normal = vec3.fromValues(
             ellipsoidNormals[i++],
@@ -409,12 +418,13 @@ function loadModels() {
             ellipsoidNormals[i],
           );
           vec3.normalize(normal, normal);
-          var texU = Math.sin(normal[0]) / Math.PI + 0.5;
-          var texV = Math.sin(normal[1]) / Math.PI + 0.5;
+          var texU = Math.asin(normal[0]) / Math.PI + 0.5;
+          var texV = Math.asin(normal[1]) / Math.PI + 0.5;
           // var texU = normal[0] / 2 + 0.5;
           // var texV = normal[1] / 2 + 0.5;
-          ellipsoidUVs.push(texU, texV);
+          ellipsoidUVs.push(1 - texU, 1 - texV);
         }
+        // console.log(ellipsoidUVs);
 
         // make triangles, from south pole to middle latitudes to north pole
         var ellipsoidTriangles = []; // triangles to return
@@ -673,6 +683,7 @@ function setupShaders() {
         // texture vars
         varying vec2 vTextureCoord; // interpolated texture coords
         uniform highp sampler2D uSampler;
+        uniform float blendToggle; // which blend mode to use
             
         void main(void) {
         
@@ -683,7 +694,7 @@ function setupShaders() {
             vec3 normal = normalize(vVertexNormal); 
             vec3 light = normalize(uLightPosition - vWorldPos);
             float lambert = max(0.0,dot(normal,light));
-            vec3 diffuse = uDiffuse*uLightDiffuse*lambert; // diffuse term
+            vec3 diffuse = uLightDiffuse*lambert; // diffuse term
             
             // specular term
             vec3 eye = normalize(uEyePosition - vWorldPos);
@@ -694,7 +705,11 @@ function setupShaders() {
             // combine to output color
             vec3 colorOut = ambient + diffuse + specular; // no specular yet
             // gl_FragColor = vec4(colorOut, 1.0);
-            gl_FragColor = texture2D(uSampler, vTextureCoord);
+            if (blendToggle == 1.0) { //modulate
+              gl_FragColor = texture2D(uSampler, vTextureCoord) * vec4(colorOut, 1.0);
+            } else { // replace
+              gl_FragColor = texture2D(uSampler, vTextureCoord);
+            }
             if (gl_FragColor.a < 0.1) {
               discard;
             }
@@ -754,6 +769,7 @@ function setupShaders() {
         diffuseULoc = gl.getUniformLocation(shaderProgram, 'uDiffuse'); // ptr to diffuse
         specularULoc = gl.getUniformLocation(shaderProgram, 'uSpecular'); // ptr to specular
         shininessULoc = gl.getUniformLocation(shaderProgram, 'uShininess'); // ptr to shininess
+        blendToggleULoc = gl.getUniformLocation(shaderProgram, 'blendToggle'); // ptr to blend mode
         uSampler = gl.getUniformLocation(shaderProgram, 'uSampler');
 
         // pass global constants into fragment uniforms
