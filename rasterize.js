@@ -400,6 +400,7 @@ function loadModels() {
         });
 
         // make UV coords using Normal x,y coords
+        // Source: http://www.mvps.org/directx/articles/spheremap.htm
         var ellipsoidUVs = [];
         for (var i = 0; i < ellipsoidNormals.length; i++) {
           var normal = vec3.fromValues(
@@ -408,7 +409,11 @@ function loadModels() {
             ellipsoidNormals[i],
           );
           vec3.normalize(normal, normal);
-          ellipsoidUVs.push(normal[0], normal[2]);
+          var texU = Math.sin(normal[0]) / Math.PI + 0.5;
+          var texV = Math.sin(normal[1]) / Math.PI + 0.5;
+          // var texU = normal[0] / 2 + 0.5;
+          // var texV = normal[1] / 2 + 0.5;
+          ellipsoidUVs.push(texU, texV);
         }
 
         // make triangles, from south pole to middle latitudes to north pole
@@ -690,7 +695,7 @@ function setupShaders() {
             vec3 colorOut = ambient + diffuse + specular; // no specular yet
             // gl_FragColor = vec4(colorOut, 1.0);
             gl_FragColor = texture2D(uSampler, vTextureCoord);
-            if (gl_FragColor.a < 0.7) {
+            if (gl_FragColor.a < 0.1) {
               discard;
             }
         }
