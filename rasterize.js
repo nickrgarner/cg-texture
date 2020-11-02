@@ -296,8 +296,8 @@ function handleKeyDown(event) {
       } // end for all triangle sets
       for (var whichEllipsoid = 0; whichEllipsoid < numEllipsoids; whichEllipsoid++) {
         vec3.set(inputEllipsoids[whichEllipsoid].translation, 0, 0, 0);
-        vec3.set(inputEllipsoids[whichTriSet].xAxis, 1, 0, 0);
-        vec3.set(inputEllipsoids[whichTriSet].yAxis, 0, 1, 0);
+        vec3.set(inputEllipsoids[whichEllipsoid].xAxis, 1, 0, 0);
+        vec3.set(inputEllipsoids[whichEllipsoid].yAxis, 0, 1, 0);
       } // end for all ellipsoids
       break;
     case 'KeyB':
