@@ -694,7 +694,7 @@ function setupShaders() {
             vec3 normal = normalize(vVertexNormal); 
             vec3 light = normalize(uLightPosition - vWorldPos);
             float lambert = max(0.0,dot(normal,light));
-            vec3 diffuse = uLightDiffuse*lambert; // diffuse term
+            vec3 diffuse = uDiffuse*uLightDiffuse*lambert; // diffuse term
             
             // specular term
             vec3 eye = normalize(uEyePosition - vWorldPos);
