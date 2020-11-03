@@ -36,6 +36,7 @@ var diffuseULoc; // where to put diffuse reflectivity for fragment shader
 var specularULoc; // where to put specular reflectivity for fragment shader
 var shininessULoc; // where to put specular exponent for fragment shader
 var blendToggleULoc; // where to put current texture-light blending mode for frag shader
+var alphaULoc; // where to put the alpha value for transparency
 
 /* interaction variables */
 var Eye = vec3.clone(defaultEye); // eye position in world space
@@ -684,6 +685,7 @@ function setupShaders() {
         varying vec2 vTextureCoord; // interpolated texture coords
         uniform highp sampler2D uSampler;
         uniform float blendToggle; // which blend mode to use
+        uniform float alpha; // alpha value for transparency
             
         void main(void) {
         
@@ -706,7 +708,7 @@ function setupShaders() {
             vec3 colorOut = ambient + diffuse + specular; // no specular yet
             // gl_FragColor = vec4(colorOut, 1.0);
             if (blendToggle == 1.0) { //modulate
-              gl_FragColor = texture2D(uSampler, vTextureCoord) * vec4(colorOut, 1.0);
+              gl_FragColor = texture2D(uSampler, vTextureCoord) * vec4(colorOut, alpha);
             } else { // replace
               gl_FragColor = texture2D(uSampler, vTextureCoord);
             }
@@ -770,6 +772,7 @@ function setupShaders() {
         specularULoc = gl.getUniformLocation(shaderProgram, 'uSpecular'); // ptr to specular
         shininessULoc = gl.getUniformLocation(shaderProgram, 'uShininess'); // ptr to shininess
         blendToggleULoc = gl.getUniformLocation(shaderProgram, 'blendToggle'); // ptr to blend mode
+        alphaULoc = gl.getUniformLocation(shaderProgram, 'alpha'); // ptr to alpha value
         uSampler = gl.getUniformLocation(shaderProgram, 'uSampler');
 
         // pass global constants into fragment uniforms
@@ -892,6 +895,14 @@ function renderModels() {
     gl.bindTexture(gl.TEXTURE_2D, currentTexture);
     gl.uniform1i(uSampler, 0);
 
+    // Send alpha value to frag shader
+    gl.uniform1f(alphaULoc, currSet.material.alpha);
+    if (currSet.material.alpha == 1.0) {
+      gl.depthMask(true);
+    } else {
+      gl.depthMask(false);
+    }
+
     // triangle buffer: activate and render
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, triangleBuffers[whichTriSet]); // activate
     gl.drawElements(gl.TRIANGLES, 3 * triSetSizes[whichTriSet], gl.UNSIGNED_SHORT, 0); // render
@@ -939,6 +950,14 @@ function renderModels() {
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, currentTexture);
     gl.uniform1i(uSampler, 0);
+
+    // Send alpha value to frag shader
+    gl.uniform1f(alphaULoc, ellipsoid.alpha);
+    if (currSet.material.alpha == 1.0) {
+      gl.depthMask(true);
+    } else {
+      gl.depthMask(false);
+    }
 
     // draw a transformed instance of the ellipsoid
     gl.drawElements(
